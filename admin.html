@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>관리 · 회차 입력과 성적 기록</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<style>
+:root{
+  --ink:#0d1117; --ink2:#161c24; --line:#2a323d;
+  --paper:#e8eaed; --dim:#8b949e; --seal:#c6a15b;
+  --y:#fbc400; --b:#69c8f2; --r:#ff7272; --g:#aaaaaa; --gr:#b0d840;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--ink); color:var(--paper);
+  font-family:Pretendard,-apple-system,system-ui,sans-serif;
+  font-feature-settings:"tnum"; line-height:1.6; padding:0 20px 70px;
+}
+.wrap{max-width:620px;margin:0 auto}
+
+header{padding:40px 0 8px;border-bottom:1px solid var(--line);margin-bottom:8px}
+h1{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.crumb{font-size:13px;color:var(--dim);margin-top:4px}
+.crumb a{color:var(--seal)}
+
+section{margin-top:36px}
+h2{font-size:15px;font-weight:700;padding-bottom:10px;
+   border-bottom:1px solid var(--line);margin-bottom:18px;
+   display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+h2 em{font-style:normal;font-size:12px;font-weight:500;color:var(--dim)}
+
+.ball{width:34px;height:34px;border-radius:50%;display:inline-flex;
+  align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#1a1a1a;
+  box-shadow:inset 0 -3px 6px rgba(0,0,0,.22),0 2px 5px rgba(0,0,0,.45);flex:0 0 auto}
+.ball.sm{width:29px;height:29px;font-size:12px}
+.ball.hit{outline:2px solid #fff;outline-offset:2px}
+.c1{background:var(--y)}.c2{background:var(--b)}.c3{background:var(--r)}
+.c4{background:var(--g)}.c5{background:var(--gr)}
+
+.field{margin-bottom:12px}
+label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px}
+input,textarea{width:100%;font-family:inherit;font-size:15px;color:var(--paper);
+  background:var(--ink2);border:1px solid var(--line);border-radius:6px;padding:11px 13px}
+textarea{font-size:11px;line-height:1.5;resize:vertical;min-height:90px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+input:focus,textarea:focus{outline:2px solid var(--seal);outline-offset:-1px;border-color:transparent}
+input::placeholder{color:#5a6470}
+
+button{font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);
+  background:var(--paper);border:0;border-radius:6px;padding:12px 18px;cursor:pointer}
+button:hover{opacity:.85}
+button:focus-visible{outline:2px solid var(--seal);outline-offset:2px}
+button.ghost{background:transparent;color:var(--paper);border:1px solid var(--line)}
+button.sm{padding:9px 13px;font-size:13px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.btns button{flex:1;min-width:120px}
+
+.row{display:flex;align-items:center;gap:7px;padding:11px 0;border-bottom:1px solid var(--ink2)}
+.row:last-child{border-bottom:0}
+.tag{width:20px;font-size:12px;font-weight:700;color:var(--dim);flex:0 0 auto}
+.nums{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.stat{background:var(--ink);padding:15px 13px}
+.stat .v{font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1.15}
+.stat .k{font-size:11px;color:var(--dim);margin-top:3px}
+.stat .s{font-size:11px;color:#5a6470;margin-top:2px}
+.pos{color:var(--gr)}.neg{color:var(--r)}
+
+.rec{border-bottom:1px solid var(--ink2);padding:13px 0}
+.rec-h{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;gap:8px}
+.rec-h .w{color:var(--seal);font-size:12px;text-align:right}
+.rec-l{display:flex;align-items:center;gap:6px;padding:3px 0}
+.hit{font-size:12px;color:var(--dim);min-width:28px}
+.hit.g{color:var(--gr);font-weight:700}
+
+.msg{font-size:13px;min-height:20px;padding:8px 0}
+.msg.err{color:var(--r)}.msg.ok{color:var(--gr)}
+.empty{color:var(--dim);font-size:13px;text-align:center;padding:22px 0}
+.hint{font-size:12px;color:var(--dim);line-height:1.75;margin-top:10px}
+.step{font-size:13px;color:var(--dim);line-height:1.9;padding-left:18px;margin-top:10px}
+.step li{margin-bottom:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>관리 페이지</h1>
+  <p class="crumb">회차 입력 · 성적 기록 · 배포 갱신 &nbsp;|&nbsp; <a href="index.html">방문자 페이지 →</a></p>
+</header>
+
+<section>
+  <h2>이번 주 조합 <em id="genMeta"></em></h2>
+  <div id="lines"><div class="empty">조합을 만들면 여기에 표시되고, 다음 회차 입력 시 자동 채점됩니다.</div></div>
+  <div class="btns">
+    <button onclick="generate()">조합 만들기</button>
+    <button class="ghost" onclick="copyLines()">번호 복사</button>
+  </div>
+  <div class="msg" id="genMsg"></div>
+</section>
+
+<section>
+  <h2>회차 추가 <em>추첨 결과 입력</em></h2>
+  <div class="field">
+    <label for="d1">당첨번호 6개 (보너스 제외)</label>
+    <input id="d1" placeholder="7 13 16 23 24 43" inputmode="numeric">
+  </div>
+  <div class="field">
+    <label for="d2">받은 당첨금 (원, 없으면 0)</label>
+    <input id="d2" placeholder="5000" inputmode="numeric">
+  </div>
+  <div class="btns"><button onclick="addDraw()">저장하고 채점</button></div>
+  <div class="msg" id="addMsg"></div>
+</section>
+
+<section>
+  <h2>누적 성적 <em id="wk"></em></h2>
+  <div class="stats">
+    <div class="stat"><div class="v" id="sAvg">—</div><div class="k">줄당 평균 적중</div><div class="s">이론값 0.80</div></div>
+    <div class="stat"><div class="v" id="sW3">—</div><div class="k">5등 이상 나온 주</div><div class="s">실측 기대치 12.2%</div></div>
+    <div class="stat"><div class="v" id="sSpent">—</div><div class="k">지출</div><div class="s" id="sLines"></div></div>
+    <div class="stat"><div class="v" id="sNet">—</div><div class="k">수지</div><div class="s" id="sWon"></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>구매 기록 <em>최근 순</em></h2>
+  <div id="recs"><div class="empty">아직 기록이 없습니다.</div></div>
+  <div class="btns">
+    <button class="ghost sm" onclick="expo()">백업 내보내기</button>
+    <button class="ghost sm" onclick="document.getElementById('imp').click()">백업 불러오기</button>
+    <button class="ghost sm" onclick="reset()">초기화</button>
+  </div>
+  <input type="file" id="imp" accept="application/json" hidden onchange="impo(event)">
+</section>
+
+<section>
+  <h2>방문자에게 반영하기 <em>주 1회</em></h2>
+  <p class="hint">여기서 추가한 회차는 이 브라우저에만 저장됩니다.
+  방문자 페이지에도 반영하려면 아래 코드를 GitHub의 <code>data.js</code>에 덮어써야 합니다.</p>
+  <ol class="step">
+    <li>아래 <b>갱신 코드 만들기</b>를 누릅니다</li>
+    <li><b>복사</b>를 누릅니다</li>
+    <li>GitHub 저장소에서 <code>data.js</code>를 열고 연필 아이콘을 누릅니다</li>
+    <li>기존 내용을 전부 지우고 붙여넣은 뒤 Commit changes</li>
+  </ol>
+  <div class="btns" style="margin-top:14px">
+    <button class="ghost" onclick="makeCode()">갱신 코드 만들기</button>
+    <button class="ghost" onclick="copyCode()">복사</button>
+  </div>
+  <div class="field" style="margin-top:12px">
+    <textarea id="out" readonly placeholder="버튼을 누르면 여기에 코드가 생성됩니다"></textarea>
+  </div>
+  <div class="msg" id="outMsg"></div>
+</section>
+
+</div>
+
+<script src="data.js"></script>
+<script>
+const PRIMES=new Set([2,3,5,7,11,13,17,19,23,29,31,37,41,43]);
+const KEY="lotto_admin_v1";
+let base=[], store={extra:[],log:[],pending:null}, draws=[];
+
+try{ base=(window.DRAWS||"").split(";").filter(Boolean).map(r=>r.split(",").map(Number)); }catch(e){}
+
+function load(){
+  try{ const s=localStorage.getItem(KEY); if(s) store=JSON.parse(s); }catch(e){}
+  draws=base.concat(store.extra||[]);
+}
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(store)); }catch(e){} }
+
+const colorOf=n=>n<=10?"c1":n<=20?"c2":n<=30?"c3":n<=40?"c4":"c5";
+function ball(n,o={}){const d=document.createElement("div");
+  d.className="ball "+colorOf(n)+(o.sm?" sm":"")+(o.hit?" hit":"");d.textContent=n;return d;}
+const won=v=>v.toLocaleString("ko-KR")+"원";
+
+function valid(c){
+  const s=c.reduce((a,b)=>a+b,0); if(s<100||s>175) return false;
+  const odd=c.filter(x=>x%2).length; if(odd<2||odd>4) return false;
+  const hi=c.filter(x=>x>=23).length; if(hi<2||hi>4) return false;
+  const pr=c.filter(x=>PRIMES.has(x)).length; if(pr<1||pr>3) return false;
+  const t={}; for(const x of c){const k=x%10;t[k]=(t[k]||0)+1;if(t[k]>=3)return false;}
+  const q=[...c].sort((a,b)=>a-b);
+  for(let i=0;i<4;i++) if(q[i+1]===q[i]+1&&q[i+2]===q[i]+2) return false;
+  if(c.filter(x=>x>=32).length<1) return false;
+  return true;
+}
+function weights(){
+  const c={}; for(let i=1;i<=45;i++) c[i]=1;
+  draws.slice(-100).flat().forEach(n=>{if(c[n]!==undefined)c[n]++;});
+  const w=[]; for(let i=1;i<=45;i++) w.push(c[i]*(i>=32?1.6:1));
+  return w;
+}
+function pick(pool,w,k){
+  const p=pool.slice(),o=[]; let ww=p.map(n=>w[n-1]);
+  for(let i=0;i<k;i++){const tot=ww.reduce((a,b)=>a+b,0);let r=Math.random()*tot,j=0;
+    while(r>ww[j]&&j<ww.length-1){r-=ww[j];j++;}
+    o.push(p[j]);p.splice(j,1);ww.splice(j,1);}
+  return o.sort((a,b)=>a-b);
+}
+function genLine(b,w){
+  const pool=[]; for(let i=1;i<=45;i++) if(!b.has(i)) pool.push(i);
+  if(pool.length<6) return null;
+  for(let t=0;t<3000;t++){const c=pick(pool,w,6); if(valid(c)) return c;}
+  return null;
+}
+function build(l,b,w){
+  if(l.length===5) return l;
+  for(let t=0;t<30;t++){
+    const c=genLine(b,w); if(!c) break;
+    const nb=new Set(b); c.forEach(n=>nb.add(n));
+    const r=build(l.concat([c]),nb,w); if(r) return r;
+  }
+  return null;
+}
+
+function generate(){
+  const w=weights(); let lines=null;
+  for(let t=0;t<50&&!lines;t++) lines=build([],new Set(),w);
+  const m=document.getElementById("genMsg");
+  if(!lines){ m.className="msg err"; m.textContent="한 번 더 눌러 주세요."; return; }
+  store.pending={round:draws.length+1,lines}; save();
+  renderPending();
+  m.className="msg ok"; m.textContent="저장했습니다. 다음 회차 입력 시 자동 채점됩니다.";
+}
+function renderPending(){
+  const box=document.getElementById("lines");
+  if(!store.pending){ box.innerHTML='<div class="empty">조합을 만들면 여기에 표시됩니다.</div>';
+    document.getElementById("genMeta").textContent=""; return; }
+  box.innerHTML="";
+  store.pending.lines.forEach((c,i)=>{
+    const r=document.createElement("div"); r.className="row";
+    const t=document.createElement("div"); t.className="tag"; t.textContent=String.fromCharCode(65+i);
+    const n=document.createElement("div"); n.className="nums";
+    c.forEach(x=>n.appendChild(ball(x)));
+    r.append(t,n); box.appendChild(r);
+  });
+  document.getElementById("genMeta").textContent=store.pending.round+"회 대상";
+}
+function copyLines(){
+  if(!store.pending) return;
+  navigator.clipboard.writeText(store.pending.lines.map(c=>c.join(" ")).join("\n"))
+    .then(()=>{const m=document.getElementById("genMsg");m.className="msg ok";m.textContent="복사했습니다.";});
+}
+
+function addDraw(){
+  const m=document.getElementById("addMsg");
+  const ns=document.getElementById("d1").value.trim().split(/[\s,]+/).filter(Boolean).map(Number);
+  if(ns.length!==6||ns.some(n=>!Number.isInteger(n)||n<1||n>45)||new Set(ns).size!==6){
+    m.className="msg err"; m.textContent="1~45 사이 서로 다른 숫자 6개를 입력하세요."; return;
+  }
+  const prize=parseInt(document.getElementById("d2").value||"0",10)||0;
+  const s=[...ns].sort((a,b)=>a-b);
+  store.extra=(store.extra||[]).concat([s]);
+  if(store.pending){
+    store.log.unshift({round:store.pending.round,lines:store.pending.lines,winning:s,prize});
+    store.pending=null;
+  }else{
+    store.log.unshift({round:draws.length+1,lines:[],winning:s,prize});
+  }
+  save(); load(); renderAll();
+  document.getElementById("d1").value=""; document.getElementById("d2").value="";
+  m.className="msg ok"; m.textContent=s.join(", ")+" 저장 완료 · 총 "+draws.length+"회차";
+}
+
+function renderStats(){
+  const sc=store.log.filter(r=>r.lines&&r.lines.length);
+  const ids=["sAvg","sW3","sSpent","sNet"];
+  if(!sc.length){ ids.forEach(i=>document.getElementById(i).textContent="—");
+    document.getElementById("wk").textContent="";
+    document.getElementById("sLines").textContent="";
+    document.getElementById("sWon").textContent=""; return; }
+  let tl=0,th=0,w3=0,sp=0,gn=0;
+  sc.forEach(r=>{
+    const ws=new Set(r.winning);
+    const h=r.lines.map(c=>c.filter(n=>ws.has(n)).length);
+    tl+=r.lines.length; th+=h.reduce((a,b)=>a+b,0);
+    if(Math.max(...h)>=3) w3++;
+    sp+=r.lines.length*1000; gn+=r.prize||0;
+  });
+  document.getElementById("wk").textContent=sc.length+"주 / "+tl+"줄";
+  document.getElementById("sAvg").textContent=(th/tl).toFixed(2);
+  document.getElementById("sW3").textContent=Math.round(w3/sc.length*100)+"%";
+  document.getElementById("sSpent").textContent=sp.toLocaleString("ko-KR");
+  document.getElementById("sLines").textContent=tl+"줄 × 1,000원";
+  const net=gn-sp, e=document.getElementById("sNet");
+  e.textContent=(net>=0?"+":"")+net.toLocaleString("ko-KR");
+  e.className="v "+(net>=0?"pos":"neg");
+  document.getElementById("sWon").textContent="회수 "+won(gn);
+}
+
+function renderRecs(){
+  const box=document.getElementById("recs");
+  if(!store.log.length){ box.innerHTML='<div class="empty">아직 기록이 없습니다.</div>'; return; }
+  box.innerHTML="";
+  store.log.slice(0,15).forEach(r=>{
+    const ws=new Set(r.winning);
+    const d=document.createElement("div"); d.className="rec";
+    const h=document.createElement("div"); h.className="rec-h";
+    const b=document.createElement("b"); b.textContent=r.round+"회";
+    const w=document.createElement("span"); w.className="w";
+    w.textContent=r.winning.join(" · ")+(r.prize?"  ·  "+won(r.prize):"");
+    h.append(b,w); d.appendChild(h);
+    (r.lines||[]).forEach(c=>{
+      const row=document.createElement("div"); row.className="rec-l";
+      c.forEach(n=>row.appendChild(ball(n,{sm:true,hit:ws.has(n)})));
+      const k=c.filter(n=>ws.has(n)).length;
+      const s=document.createElement("span"); s.className="hit"+(k>=3?" g":""); s.textContent=k+"개";
+      row.appendChild(s); d.appendChild(row);
+    });
+    box.appendChild(d);
+  });
+}
+
+function makeCode(){
+  const all=draws.map(r=>r.join(",")).join(";");
+  const ch=[]; for(let i=0;i<all.length;i+=80) ch.push(all.slice(i,i+80));
+  const body=ch.map(c=>'  "'+c+'" +').join("\n").slice(0,-2);
+  const code="/* 로또 당첨번호 데이터 — 1회부터 "+draws.length+"회까지\n"+
+    "   갱신 방법: admin.html에서 '갱신 코드 만들기' → 복사 → 이 파일에 덮어쓰기 */\n"+
+    "window.DRAWS =\n"+body+";\n";
+  document.getElementById("out").value=code;
+  const m=document.getElementById("outMsg");
+  m.className="msg ok"; m.textContent=draws.length+"회차까지 담긴 코드를 만들었습니다.";
+}
+function copyCode(){
+  const t=document.getElementById("out");
+  if(!t.value){ makeCode(); }
+  navigator.clipboard.writeText(t.value).then(()=>{
+    const m=document.getElementById("outMsg");
+    m.className="msg ok"; m.textContent="복사했습니다. GitHub의 data.js에 덮어쓰세요.";
+  });
+}
+
+function expo(){
+  const b=new Blob([JSON.stringify(store,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(b); a.download="lotto-backup.json"; a.click();
+}
+function impo(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{try{store=JSON.parse(r.result);save();load();renderAll();}catch(x){}};
+  r.readAsText(f); e.target.value="";
+}
+function reset(){
+  if(!confirm("저장된 회차와 기록을 모두 지웁니다. 계속할까요?")) return;
+  store={extra:[],log:[],pending:null}; save(); load(); renderAll();
+}
+
+function renderAll(){ renderPending(); renderStats(); renderRecs(); }
+load(); renderAll();
+</script>
+</body>
+</html>
